@@ -73,6 +73,7 @@ def verify(pubkey,content,sign):
 def hash(content):
     return SHA256.new(bytes(content, encoding= "utf-8")).hexdigest()
 
+
 if __name__ == '__main__' :
     gen_keys("priv.pem", "pub.pem")
     priv_key, pub_key = open_key("priv.pem", "pub.pem")

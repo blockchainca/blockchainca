@@ -19,9 +19,10 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, consensus = ConsenseMethod.PBFT):
-        self.peers = []         # Other nodes in the network
-        self.isMain = False     # Is Main Server?
+    def __init__(self, config, consensus = ConsenseMethod.PBFT):
+        self.ip = config['ip']        # Ip Address
+        self.peers = config['peers']      # Other nodes in the network
+        self.isMain = config['role'] == "master"    # Is Main Server?
         self.mainAddress = None # Main Server's Ip Address
         self.blocks = []
         self.consensus = consensus
