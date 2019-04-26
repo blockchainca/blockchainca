@@ -5,7 +5,26 @@
 ############################################################
 
 from Crypto.PublicKey import RSA
+import requests
+from enum import Enum
+
+
+class ConsenseMethod(Enum):
+    # 共识机制的编号 ... 可能只实现其中一个
+    POW = 0
+    PBFT = 1
 
 
 class Node(object):
-    pass
+
+    __doc__ = "This is a node in the block chain network"
+
+    def __init__(self, consensus = ConsenseMethod.PBFT):
+        self.peers = []         # Other nodes in the network
+        self.isMain = False     # Is Main Server?
+        self.mainAddress = None # Main Server's Ip Address
+        self.blocks = []
+        self.consensus = consensus
+
+    def add_block(self,block):
+        raise NotImplemented
