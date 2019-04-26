@@ -5,4 +5,5 @@
 ############################################################
 
 import hashlib
+from Crypto.publicKey import RSA
 

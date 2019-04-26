@@ -5,3 +5,5 @@
 # The Code running in the node of Block Chain L
 ############################################################
 
+__version__ = "0.0.1"
+__License__ = "MIT"
