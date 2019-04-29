@@ -5,21 +5,11 @@
 ############################################################
 
 import json
-from flask import Flask     # Used as server and listener
-import requests             # Used as client and sender
-
-from node import Node, ConsenseMethod
-from block import Block, Certificate
-from mycrypto import *
-
-app = Flask(__name__)
+from .node import Node, NodeAddr, ConsenseMethod
 
 with open("config/master.json","r") as f:
     config = json.load(f)
-    print(config)
 
-node = Node(config, consensus=ConsenseMethod.PBFT)
+node = Node(config)
 
-
-if __name__ == '__main__':
-    pass
+print(node)
