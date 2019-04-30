@@ -6,6 +6,7 @@
 
 import json
 from .node import Node, NodeAddr, ConsenseMethod
+import threading,socket
 
 with open("config/master.json","r") as f:
     config = json.load(f)
