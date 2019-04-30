@@ -33,7 +33,7 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, config, consensus = ConsenseMethod.PBFT):
+    def __init__(self, config, consensus = ConsenseMethod.PBFT, diff=4):
 
         # Ip Config
         self.addr = NodeAddr(config["addr"])    # Address
@@ -50,23 +50,35 @@ class Node(object):
         # Data Config
         self.blocks = []
         for block in config["block"]:
-            self.blocks.append(Block(block))
+            self.blocks.append(Block(block,diff = diff))
 
         # Consensus Config
         self.consensus = consensus
         self.status = False
         self.server = NodeServer(self,self.addr)
+
+        ## POW
+        self.diff = diff
+        self.newblock = Block([], diff=self.diff, timeStamp=None,
+                              prevBlockHash="")
+        self.alock = threading.Lock()
+
+        ## Start
         self.core()
 
     def core(self):
         self.runserver()
         self.find_main()
+
         while True:
-            time.sleep(5)
-            if self.mainAddr == self.addr:
-                self.set_main(self.peers[random.randint(0, 1)])
-            if not self.testalive():
-                self.set_main(self.addr)
+            if self.addr != self.mainAddr:
+                info = str(random.randint(0, 1000))
+                print(info)
+                ret = sender(self.peers[0], dumpjson("add", info))
+                time.sleep(3)
+            else:
+                ret = self.newblock.pow(self.diff)
+                self.add_block()
 
     def runserver(self):
         self.server.start()
@@ -75,8 +87,10 @@ class Node(object):
         if not self.mainAddr:
             rets = broadcast(self.peers,dumpjson("getinfo",""))
             for ret in rets:
+                print(ret)
                 if ret != 'Error':
                     self.mainAddr = NodeAddr(ret['main'])
+                    break
             print("Info: Change Main Address to {}".format(self.mainAddr))
 
     def set_main(self, addr):
@@ -103,6 +117,22 @@ class Node(object):
         ret = sender(self.mainAddr, dumpjson("isalive",""))
         return ret == True
 
+    def add_block(self):
+        self.server.store["cache_lock"].acquire()
+        cache = self.server.store['cache']
+        self.server.store['cache'] = []
+        self.server.store["cache_lock"].release()
+
+        self.alock.acquire()
+        if self.newblock:
+            print(self.newblock)
+            self.blocks.append(self.newblock)
+        self.newblock = Block([], diff=self.diff, timeStamp=None,
+                              prevBlockHash=self.blocks[-1].gethash())
+        self.newblock.append(cache)
+        self.newblock.flesh()
+        self.alock.release()
+
 
 class NodeServer(threading.Thread):
     def __init__(self, node, addr):
@@ -111,11 +141,14 @@ class NodeServer(threading.Thread):
         self.port = int(addr["port"])
         self.node = node
         self.store = {}                     # 临时存储
+        self.store['cache'] = []
+        self.store['cache_lock'] = threading.Lock()
         self.route = {}
         self.route['getinfo'] = self.handle_getinfo
         self.route['setmain_pre'] = self.handle_setmain_prev
         self.route['setmain_after'] = self.handle_setmain_after
         self.route['isalive'] = self.handle_isalve
+        self.route['add'] = self.handle_add
 
     def run(self):
         s = socket.socket()
@@ -145,11 +178,18 @@ class NodeServer(threading.Thread):
         return True
 
     def handle_setmain_after(self,msg):
-        if msg == True:
+        if msg:
             self.node.mainAddr = self.store['mainAddr']
         self.store["mainAddr"] = None
         print("Info: Change Main Address to {}".format(self.node.mainAddr))
         return True
 
-    def handle_isalve(self,msg):
+    def handle_isalve(self, msg):
+        return True
+
+    def handle_add(self, data):
+        print("resv: {}".format(data))
+        self.store['cache_lock'].acquire()
+        self.store['cache'].append(data)
+        self.store['cache_lock'].release()
         return True

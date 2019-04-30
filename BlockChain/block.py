@@ -7,6 +7,8 @@
 import time
 import json
 from . import mycrypto
+import threading
+
 
 
 class Block(object):
@@ -20,10 +22,11 @@ class Block(object):
         data = []                               # Data
         sign = []                               # sign used in the PBFT
 
-        def __init__(self, data, timeStamp = None, prevBlockHash = ""):
+        def __init__(self, data, diff = 5, timeStamp = None, prevBlockHash = ""):
             self.version = 1
             self.nonce = 0
             self.sign = []
+            self.diff = diff
             self.data = data
             self.prevBlockHash = prevBlockHash
             if not timeStamp:
@@ -31,9 +34,31 @@ class Block(object):
             else:
                 self.timeStamp = timeStamp
             self.merkleTree = MerkleTree(self.data)
+            self.pow(diff=self.diff)
 
         def __str__(self):
             return json.dumps(self.__dict__)
+
+        def gethash(self):
+            return mycrypto.hash(self.__str__())
+
+        def append(self,new_data):
+            self.data.extend(new_data)
+
+        def flesh(self):
+            self.timeStamp = time.time()
+            self.merkleTree = MerkleTree(self.data)
+            self.nonce = 0
+
+        def pow(self, diff=5):
+            while True:
+                if self.verify(diff):
+                    break
+                self.nonce += 1
+            return True
+
+        def verify(self, diff):
+            return int(self.gethash()[0:diff], 16) == 0
 
 
 # Merkle Tree
