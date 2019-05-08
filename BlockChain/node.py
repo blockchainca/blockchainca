@@ -23,6 +23,7 @@ class NodeAddr(dict):
     def __eq__(self, other):
         return self["ip"] == other["ip"] and self["port"] == other["port"]
 
+
 class ConsenseMethod(Enum):
     # 共识机制的编号 ... 可能只实现其中一个
     POW = 0
@@ -49,22 +50,26 @@ class Node(object):
 
         # Data Config
         self.blocks = []
-        for block in config["block"]:
-            self.blocks.append(Block(block,diff = diff))
+        for idx, block in enumerate(["block"]):
+            self.blocks.append(Block(block, diff=diff, height=idx))
 
         # Consensus Config
         self.consensus = consensus
         self.status = False
         self.server = NodeServer(self,self.addr)
 
-        ## POW
+        # POW
         self.diff = diff
-        self.newblock = Block([], diff=self.diff, timeStamp=None,
-                              prevBlockHash="")
+        self.newblock = Block([], height=len(self.blocks), diff=self.diff,
+                              timeStamp=None, prevBlockHash="")
         self.alock = threading.Lock()
 
-        ## Start
+        # Start
         self.core()
+
+    def print_block(self):
+        for bl in self.blocks:
+            print(bl)
 
     def core(self):
         self.runserver()
@@ -101,7 +106,7 @@ class Node(object):
         for ret in rets:
             if ret != 'Error':
                 count += 1
-                if ret == True:
+                if ret:
                     success += 1
 
         if isconse(success,count):
@@ -111,12 +116,13 @@ class Node(object):
         self.mainAddr = addr
         print("Info: Change Main Address to {}".format(self.mainAddr))
 
-    def testalive(self, addr = None):
+    def testalive(self, addr=None):
         if not addr:
             addr = self.mainAddr
         ret = sender(self.mainAddr, dumpjson("isalive",""))
         return ret == True
 
+    # Create a new block
     def add_block(self):
         self.server.store["cache_lock"].acquire()
         cache = self.server.store['cache']
@@ -127,11 +133,39 @@ class Node(object):
         if self.newblock:
             print(self.newblock)
             self.blocks.append(self.newblock)
-        self.newblock = Block([], diff=self.diff, timeStamp=None,
+        self.newblock = Block([], height=len(self.blocks), diff=self.diff, timeStamp=None,
                               prevBlockHash=self.blocks[-1].gethash())
         self.newblock.append(cache)
-        self.newblock.flesh()
+        self.newblock.flesh(len(self.blocks))
         self.alock.release()
+
+        # SEND THE NEW BLOCK
+        self.boardcast_block(self.blocks[-1])
+
+    # Import a new block from network
+    def import_block(self, js):
+        self.alock.acquire()
+        tmpBlock = Block([])
+        ret = tmpBlock.init_from_json(js)
+        if ret != -1:
+            print("Data Broken.")
+        # elif tmpBlock.prevBlockHash != self.blocks[-1].gethash():
+        #     print("Error Hash")
+        # elif tmpBlock.height != self.blocks[-1].height + 1:
+        #     print("Error Height")
+        else:
+            self.blocks.append(tmpBlock)
+            # TBD
+            self.newblock.flesh(len(self.blocks))
+        self.alock.release()
+
+    def boardcast_block(self, bl):
+        broadcast(self.peers, dumpjson("resv_block", bl.__str__()))
+
+    # TBD
+    def request_block(self, height):
+        return True
+
 
 
 class NodeServer(threading.Thread):
@@ -140,15 +174,17 @@ class NodeServer(threading.Thread):
         self.ip = addr["ip"]
         self.port = int(addr["port"])
         self.node = node
-        self.store = {}                     # 临时存储
+        self.store = dict()                     # 临时存储
         self.store['cache'] = []
         self.store['cache_lock'] = threading.Lock()
-        self.route = {}
+        self.route = dict()
         self.route['getinfo'] = self.handle_getinfo
         self.route['setmain_pre'] = self.handle_setmain_prev
         self.route['setmain_after'] = self.handle_setmain_after
         self.route['isalive'] = self.handle_isalve
         self.route['add'] = self.handle_add
+        self.route['add'] = self.handle_add
+        self.route['resv_block'] = self.handle_resv_block
 
     def run(self):
         s = socket.socket()
@@ -192,4 +228,10 @@ class NodeServer(threading.Thread):
         self.store['cache_lock'].acquire()
         self.store['cache'].append(data)
         self.store['cache_lock'].release()
+        return True
+
+    def handle_resv_block(self,js):
+        # print("resv block: {}".format(js))
+        self.node.import_block(js)
+        self.node.print_block()
         return True
