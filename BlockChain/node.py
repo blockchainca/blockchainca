@@ -38,7 +38,7 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=5):
+    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=4):
 
         # Ip Config
         self.name = name

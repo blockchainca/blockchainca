@@ -4,6 +4,7 @@ import socket
 from .client import *
 from .mycrypto import *
 from .node import *
+from .certificate import *
 
 
 class NodeServer(threading.Thread):
@@ -29,6 +30,10 @@ class NodeServer(threading.Thread):
         self.route['add'] = self.handle_add
         self.route['resv_block'] = self.handle_resv_block
         self.route['request_block'] = self.handle_request_block
+        self.route['search_subject'] = self.handle_search_subject
+        self.route['search_uuid'] = self.handle_search_serial
+        self.route['search'] = self.handle_search
+
 
     def run(self):
         s = socket.socket()
@@ -71,6 +76,8 @@ class NodeServer(threading.Thread):
         print("resv: {}".format(data))
         if isinstance(data,str):
             data = json.loads(data)
+            # c = Certificate()
+            # c.load_json(data)
         self.store['cache_lock'].acquire()
         self.store['cache'].append(data)
         self.store['cache_lock'].release()
@@ -93,4 +100,42 @@ class NodeServer(threading.Thread):
         ''' return all the blocks '''
         return {'data':[ bl.__str__() for bl in self.node.blocks],
                 'height': len(self.node.blocks) }
+
+    def handle_search(self,query):
+        ans = [d for b in self.node.blocks 
+                    for d in b.data if check(d,query)]
+        return ans
     
+    def handle_search_subject(self,query):
+        ret = None
+        print(type(query),query)
+        print([b.data for b in self.node.blocks ])
+        print([d['subject'] for b in self.node.blocks for d in b.data if not isinstance(d,str)])
+        for bl in self.node.blocks:
+            for da in bl.data:
+                try:
+                    if da.search_by_subject(query):
+                        ret = da
+                except:
+                    continue
+        return ret
+
+    def handle_search_serial(self,query):
+        ret = None
+        for bl in self.node.blocks:
+            for da in bl.data:
+                try:
+                    if da.search_by_uuid(query) != None:
+                        ret = da
+                except:
+                    continue
+        return ret
+
+def check(data, ques):
+    for k,v in ques.items():
+        try:
+            if data[k] != v:
+                return False
+        except:
+            return False
+    return True

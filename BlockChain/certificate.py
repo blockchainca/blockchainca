@@ -56,10 +56,28 @@ class Certificate(object):
     def sign_content(self):
         return str(self)
 
+    def load_json(self,js):
+        self.__dict__ = json.loads(js)
+    
+    def load_dict(self,di):
+        self.__dict__ = di
+
     def create_certificate(self, priv_key):
         hashcert = mycrypto.hash(self.sign_content())
         sign = mycrypto.sign(priv_key, hashcert)
         self.Signature = sign
+
+    def search_by_subject(self, sub):
+        if sub == self.subject:
+            return self
+        else:
+            return None
+
+    def search_by_uuid(self, id):
+        if id == self.serial:
+            return self
+        else:
+            return None
 
     def __eq__(self, other):
         return self.subject == other.subject and self.serial == other.serial

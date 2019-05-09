@@ -26,15 +26,28 @@ def send_data():
     count += 1
 
 if __name__ == "__main__":
+    li = []
     init_peers()
     uug.change_addr('client1')
     priv_key,_ = mycrypto.open_key("keys/client1_priv.cer", "keys/client1_pub.cer")
     while True:
-        c = Certificate(subject = 'ertuil@ertuil.top', pub_key = "123a",proxyServer = "client1")
+        c = Certificate(subject = str(count), pub_key = "23333",proxyServer = "client1")
+        li.append(count)
+        count += 1
         c.create_certificate(priv_key)
         print("send: {}".format(c.get_js()))
         broadcast(peers, dumpjson("add", c.get_js()))
         time.sleep(5)
+
+        ret = sender(peers[0],dumpjson("search", {"subject": str(li[0])}))
+        for ce in ret:
+            c = Certificate()
+            c.load_dict(ce)
+            print("Certificate {} is found".format(c.subject))
+            try:
+                li.remove(int(c.subject))
+            except:
+                pass
     # while True:
     #     send_data()
     #     time.sleep(5)
