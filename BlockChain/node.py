@@ -38,7 +38,7 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=4):
+    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=5):
 
         # Ip Config
         self.name = name
@@ -72,8 +72,12 @@ class Node(object):
 
         # POW
         self.diff = diff
-        self.newblock = Block([], height=len(self.blocks), diff=self.diff,
+        if len(self.blocks) == 0:
+            self.newblock = Block([], height=len(self.blocks), diff=self.diff,
                               timeStamp=None, prevBlockHash="")
+        else:
+            self.newblock = Block([], height=len(self.blocks), diff=self.diff,
+                              timeStamp=None, prevBlockHash=self.blocks[-1].gethash())
         self.alock = threading.Lock()
         self.signal = dict() # 信号 用于事件驱动
         self.signal['needImport'] = True
@@ -90,9 +94,8 @@ class Node(object):
         while True:
             while self.signal['needImport'] == True:
                 self.signal['needImport'] = not self.request_block()
-            
+    
             self.import_blocks()
-            
             result = self.newblock.pow(self.diff)
             if result:
                 self.add_block()
@@ -100,17 +103,6 @@ class Node(object):
                     for bl in self.blocks:
                         f.writelines(bl.__str__() + "\n")
                 time.sleep(random.random())
-
-
-            # if self.addr != self.mainAddr:
-            #     self.import_blocks()
-            #     info = str(random.randint(0, 1000))
-            #     print(info)
-            #     ret = sender(self.peers[0], dumpjson("add", info))
-            #     time.sleep(5)
-            # else:
-            #     ret = self.newblock.pow(self.diff)
-            #     self.add_block()
 
     def runserver(self):
         self.server.start()
@@ -194,14 +186,14 @@ class Node(object):
         if ret != -1:
             print("Data Broken.")
             self.signal['needImport'] = True
-        elif tmpBlock.height != 0 and tmpBlock.prevBlockHash != self.blocks[-1].gethash():
-            print("Error Hash")
-            self.signal['needImport'] = True
         elif tmpBlock.height > self.blocks[-1].height + 1:
-            print("Error Height")
+            print("Warming: Need to Rebuild the chain")
             self.signal['needImport'] = True
         elif tmpBlock.height <= self.blocks[-1].height:
             print("Warming: Ingore block")
+        elif tmpBlock.height != 0 and tmpBlock.prevBlockHash != self.blocks[-1].gethash():
+            print("Warming: Hash is not corect")
+            self.signal['needImport'] = True
         else:
             self.blocks.append(tmpBlock)
             self.newblock.flesh(len(self.blocks),self.blocks[-1].gethash())
@@ -214,20 +206,20 @@ class Node(object):
     def request_block(self):
         rets = broadcast(self.peers,dumpjson('request_block', ''))
         HighestRet = {'height': 0, 'data': []}
+
         for ret in rets:
             if ret == 'Error':
                 continue
             elif ret['height'] > HighestRet['height']:
                 HighestRet = ret
 
-        if len(self.blocks) != 0 and HighestRet['height'] <= self.blocks[-1].height:
+        if len(self.blocks) != 0 and HighestRet['height'] <= self.blocks[-1].height + 1:
             return True
 
         self.server.store["cache_lock"].acquire()
         self.server.store['cache'] = []
         self.server.store["cache_lock"].release()
 
-        self.alock.acquire()
         self.blocks = []
         for js in HighestRet['data']:
             tmpBlock = Block([])
@@ -239,10 +231,10 @@ class Node(object):
                 print("Error: Hash Error")
                 return False
             else:
+                self.alock.acquire()
                 self.blocks.append(tmpBlock)
-        if len(self.blocks) > 0:
-            self.newblock.flesh(len(self.blocks), self.blocks[-1].gethash())
-        self.alock.release()
+                self.newblock.flesh(len(self.blocks), self.blocks[-1].gethash())
+                self.alock.release()
         self.print_block()
         return True
 

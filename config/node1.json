@@ -5,26 +5,19 @@
   },
   "role": 1,
   "block": [
-      { "height": 0, 
-        "version": 1, 
-        "nonce": 495413, 
-        "sign": [], 
-        "diff": 4, 
-        "data": ["1"], 
-        "prevBlockHash": "", 
-        "timeStamp": 1557365699.376944, 
-        "merkleTree": ["6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b"]
-      },
-      { "height": 1, 
-        "version": 1, 
-        "nonce": 3213737, 
-        "sign": [], 
-        "diff": 4, 
-        "data": ["b"], 
-        "prevBlockHash": "00000c832ee134ba8c6475df484973d20d8713b0a6ad37e5d962585b9083cf08", 
-        "timeStamp": 1557365900.137044, 
-        "merkleTree": ["3e23e8160039594a33894f6564e1b1348bbd7a0088d42c4acb73eeaed59c009d"]
-      }
+    {
+      "height": 0, 
+      "version": 1, 
+      "nonce": 1754126, 
+      "diff": 5, 
+      "data": ["1", "2"], 
+      "prevBlockHash": "", 
+      "timeStamp": 1557379080.421407, 
+      "merkleTree": [
+        "9704a05c9afffc927899ad21907866ec72b166fd58250b57bca6a184e462d554", 
+        "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b", 
+        "d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"], 
+      "sign": []}
   ],
   "peers": [
     {"ip":  "127.0.0.1", "port": 6002},

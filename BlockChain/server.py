@@ -90,6 +90,6 @@ class NodeServer(threading.Thread):
     def handle_request_block(self,data):
         ''' return all the blocks '''
         return {'data':[ bl.__str__() for bl in self.node.blocks],
-                'height': self.node.blocks[-1].height }
+                'height': len(self.node.blocks) }
 
     
