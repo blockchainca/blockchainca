@@ -38,7 +38,7 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=4):
+    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=5):
 
         # Ip Config
         self.name = name
@@ -149,6 +149,7 @@ class Node(object):
 
         self.alock.acquire()
         if self.newblock:
+
             self.newblock.sign.append(
                 {
                     'signer': self.name,

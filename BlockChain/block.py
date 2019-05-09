@@ -55,6 +55,9 @@ class Block(object):
         def flesh(self, height=None,prevHash = ""):
             if height:
                 self.height = height
+                for da in self.data:
+                    da['LastOperateHeight'] = height
+                    da['currentHeight'] = height
             self.prevBlockHash = prevHash
             self.timeStamp = time.time()
             self.merkleTree = MerkleTree(self.data)

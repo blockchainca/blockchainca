@@ -44,6 +44,7 @@ if __name__ == "__main__":
             c = Certificate()
             c.load_dict(ce)
             print("Certificate {} is found".format(c.subject))
+            print(c.get_js())
             try:
                 li.remove(int(c.subject))
             except:

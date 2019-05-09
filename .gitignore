@@ -2,4 +2,5 @@
 .Vscode/
 BlockChain/__pycache__/*
 .idea/
+data/
 env/
