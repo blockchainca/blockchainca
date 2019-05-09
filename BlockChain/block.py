@@ -39,13 +39,15 @@ class Block(object):
             # self.pow(diff=self.diff)
 
         def __str__(self):
-            return json.dumps(self.__dict__)
+            tmp = self.sign_content()
+            tmp['sign'] = self.sign
+            return json.dumps(tmp)
 
         def set_height(self,height):
             self.height = height
 
         def gethash(self):
-            return mycrypto.hash(self.__str__())
+            return mycrypto.hash(json.dumps(self.sign_content()))
 
         def append(self, new_data):
             self.data.extend(new_data)
@@ -59,10 +61,11 @@ class Block(object):
             self.nonce = 0
 
         def pow(self, diff=5):
-            while True:
-                if self.verify(diff):
-                    break
+            if self.verify(diff):
+                return True
+            else:
                 self.nonce += 1
+                return False
             return True
 
         def verify(self, diff):
@@ -85,6 +88,18 @@ class Block(object):
 
             return self.merkleTree.check(_imported_dict['merkleTree'])
 
+        def sign_content(self):
+            tmp = {
+                'height':   self.height,
+                'version':  self.version,
+                'nonce':    self.nonce,
+                'diff':     self.diff,
+                'data':     self.data,
+                'prevBlockHash': self.prevBlockHash,
+                'timeStamp':    self.timeStamp,
+                'merkleTree':   self.merkleTree
+            }
+            return tmp
 
 # Merkle Tree
 class MerkleTree(list):

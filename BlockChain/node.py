@@ -7,8 +7,10 @@
 from enum import Enum
 import time
 import json
+import os
 import threading,socket
 import random
+from .mycrypto import *
 from .block import Block
 from .server import NodeServer
 from .client import sender, broadcast, loadjson, dumpjson, isconse
@@ -36,7 +38,7 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=5):
+    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=4):
 
         # Ip Config
         self.name = name
@@ -50,6 +52,11 @@ class Node(object):
             self.mainAddr = self.addr
         else:
             self.mainAddr = None
+
+        # Public Key and Private Key
+        self.priv_key_file = "keys/"+self.name+"_priv.cer"
+        self.pub_key_file = "keys/"+self.name+"_pub.cer"
+        self.priv_key, self.pub_key = open_key(self.priv_key_file, self.pub_key_file)
 
         # Data Config
         self.blocks = []
@@ -77,28 +84,23 @@ class Node(object):
             print(bl)
 
     def run(self):
-        self.find_main()
-
+        #self.find_main()
         self.runserver()
+
         while True:
             while self.signal['needImport'] == True:
                 self.signal['needImport'] = not self.request_block()
             
             self.import_blocks()
             
-            self.newblock.pow()
-            self.add_block()
+            result = self.newblock.pow(self.diff)
+            if result:
+                self.add_block()
+                with open("data/"+ self.name + ".txt","w") as f:
+                    for bl in self.blocks:
+                        f.writelines(bl.__str__() + "\n")
+                time.sleep(random.random())
 
-
-            with open("data/"+ self.name + ".txt","w") as f:
-                for bl in self.blocks:
-                    f.writelines(bl.__str__() + "\n")
-
-            info = str(random.randint(0, 1000))
-            print("send: {}".format(info))
-            
-            broadcast(self.peers, dumpjson("add", info))
-            sender(self.addr, dumpjson("add", info) )
 
             # if self.addr != self.mainAddr:
             #     self.import_blocks()
@@ -155,7 +157,13 @@ class Node(object):
 
         self.alock.acquire()
         if self.newblock:
-            print(self.newblock)
+            self.newblock.sign.append(
+                {
+                    'signer': self.name,
+                    'sign': sign( self.priv_key, json.dumps(self.newblock.sign_content()))
+                }
+            )
+            print("create: " + str(self.newblock))
             self.blocks.append(self.newblock)
         self.newblock = Block([], height=len(self.blocks), diff=self.diff, timeStamp=None,
                               prevBlockHash=self.blocks[-1].gethash())
@@ -205,12 +213,16 @@ class Node(object):
     # TBD
     def request_block(self):
         rets = broadcast(self.peers,dumpjson('request_block', ''))
-        HighestRet = {'height': len(self.blocks), 'data': [bl.__str__() for bl in self.blocks]}
+        HighestRet = {'height': 0, 'data': []}
         for ret in rets:
             if ret == 'Error':
                 continue
-            if ret['height'] > HighestRet['height']:
+            elif ret['height'] > HighestRet['height']:
                 HighestRet = ret
+
+        if len(self.blocks) != 0 and HighestRet['height'] <= self.blocks[-1].height:
+            return True
+
         self.server.store["cache_lock"].acquire()
         self.server.store['cache'] = []
         self.server.store["cache_lock"].release()
@@ -228,12 +240,11 @@ class Node(object):
                 return False
             else:
                 self.blocks.append(tmpBlock)
-        
-        self.newblock.flesh(len(self.blocks), self.blocks[-1].gethash())
+        if len(self.blocks) > 0:
+            self.newblock.flesh(len(self.blocks), self.blocks[-1].gethash())
         self.alock.release()
         self.print_block()
         return True
-
 
 
         
