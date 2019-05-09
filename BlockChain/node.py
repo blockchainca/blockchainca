@@ -36,9 +36,10 @@ class Node(object):
 
     __doc__ = "This is a node in the block chain network"
 
-    def __init__(self, config, consensus = ConsenseMethod.POW, diff=5):
+    def __init__(self, name, config, consensus = ConsenseMethod.POW, diff=5):
 
         # Ip Config
+        self.name = name
         self.addr = NodeAddr(config["addr"])    # Address
         self.peers = []                         # Other nodes in the network
         for peer in config['peers']:
@@ -67,6 +68,8 @@ class Node(object):
         self.newblock = Block([], height=len(self.blocks), diff=self.diff,
                               timeStamp=None, prevBlockHash="")
         self.alock = threading.Lock()
+        self.signal = dict() # 信号 用于事件驱动
+        self.signal['needImport'] = True
 
 
     def print_block(self):
@@ -75,18 +78,37 @@ class Node(object):
 
     def run(self):
         self.find_main()
-        self.request_block()
 
         self.runserver()
         while True:
-            if self.addr != self.mainAddr:
-                info = str(random.randint(0, 1000))
-                print(info)
-                ret = sender(self.peers[0], dumpjson("add", info))
-                time.sleep(3)
-            else:
-                ret = self.newblock.pow(self.diff)
-                self.add_block()
+            while self.signal['needImport'] == True:
+                self.signal['needImport'] = not self.request_block()
+            
+            self.import_blocks()
+            
+            self.newblock.pow()
+            self.add_block()
+
+
+            with open("data/"+ self.name + ".txt","w") as f:
+                for bl in self.blocks:
+                    f.writelines(bl.__str__() + "\n")
+
+            info = str(random.randint(0, 1000))
+            print("send: {}".format(info))
+            
+            broadcast(self.peers, dumpjson("add", info))
+            sender(self.addr, dumpjson("add", info) )
+
+            # if self.addr != self.mainAddr:
+            #     self.import_blocks()
+            #     info = str(random.randint(0, 1000))
+            #     print(info)
+            #     ret = sender(self.peers[0], dumpjson("add", info))
+            #     time.sleep(5)
+            # else:
+            #     ret = self.newblock.pow(self.diff)
+            #     self.add_block()
 
     def runserver(self):
         self.server.start()
@@ -124,10 +146,10 @@ class Node(object):
         ret = sender(self.mainAddr, dumpjson("isalive",""))
         return ret == True
 
-    # Create a new block
+    # Create a new block used in POW
     def add_block(self):
         self.server.store["cache_lock"].acquire()
-        cache = self.server.store['cache']
+        cache = self.server.store['cache'].copy()
         self.server.store['cache'] = []
         self.server.store["cache_lock"].release()
 
@@ -163,13 +185,17 @@ class Node(object):
         ret = tmpBlock.init_from_json(js)
         if ret != -1:
             print("Data Broken.")
-        # elif tmpBlock.prevBlockHash != self.blocks[-1].gethash():
-        #     print("Error Hash")
-        # elif tmpBlock.height != self.blocks[-1].height + 1:
-        #     print("Error Height")
+            self.signal['needImport'] = True
+        elif tmpBlock.height != 0 and tmpBlock.prevBlockHash != self.blocks[-1].gethash():
+            print("Error Hash")
+            self.signal['needImport'] = True
+        elif tmpBlock.height > self.blocks[-1].height + 1:
+            print("Error Height")
+            self.signal['needImport'] = True
+        elif tmpBlock.height <= self.blocks[-1].height:
+            print("Warming: Ingore block")
         else:
             self.blocks.append(tmpBlock)
-            # TBD
             self.newblock.flesh(len(self.blocks),self.blocks[-1].gethash())
         self.alock.release()
 
@@ -196,16 +222,17 @@ class Node(object):
             msg = tmpBlock.init_from_json(js)
             if msg != -1:
                 print("Data Broken.")
-                break
+                return False
             if tmpBlock.height != 0 and tmpBlock.prevBlockHash != self.blocks[-1].gethash():
                 print("Error: Hash Error")
-                break
+                return False
             else:
                 self.blocks.append(tmpBlock)
         
         self.newblock.flesh(len(self.blocks), self.blocks[-1].gethash())
         self.alock.release()
         self.print_block()
+        return True
 
 
 

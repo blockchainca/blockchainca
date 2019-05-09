@@ -78,6 +78,11 @@ class NodeServer(threading.Thread):
         print("resv block: {}".format(js))
         self.tmpBlockLock.acquire()
         self.tmpBlock.append(js)
+
+        self.store['cache_lock'].acquire()
+        self.store['cache'] = []
+        self.store['cache_lock'].release()
+
         self.tmpBlockLock.release()
         # self.node.import_block(js)
         return True

@@ -1,8 +1,8 @@
 from BlockChain.node import Node
 import json
 
-with open("config/slave1.json","r") as f:
+with open("config/node2.json","r") as f:
     config = json.load(f)
 
-node = Node(config)
+node = Node("node2",config)
 node.run()
