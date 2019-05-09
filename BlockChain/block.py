@@ -36,7 +36,7 @@ class Block(object):
             else:
                 self.timeStamp = timeStamp
             self.merkleTree = MerkleTree(self.data)
-            self.pow(diff=self.diff)
+            # self.pow(diff=self.diff)
 
         def __str__(self):
             return json.dumps(self.__dict__)
@@ -50,9 +50,10 @@ class Block(object):
         def append(self, new_data):
             self.data.extend(new_data)
 
-        def flesh(self, height=None):
+        def flesh(self, height=None,prevHash = ""):
             if height:
                 self.height = height
+            self.prevBlockHash = prevHash
             self.timeStamp = time.time()
             self.merkleTree = MerkleTree(self.data)
             self.nonce = 0
@@ -68,8 +69,10 @@ class Block(object):
             return int(self.gethash()[0:diff], 16) == 0
 
         def init_from_json(self, js):
-            _imported_dict = json.loads(js)
-            #print(_imported_dict)
+            if isinstance(js,str):
+                _imported_dict = json.loads(js)
+            else:
+                _imported_dict = js
             self.height = _imported_dict['height']
             self.version = _imported_dict['version']
             self.nonce = _imported_dict['nonce']

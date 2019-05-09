@@ -3,7 +3,7 @@ import json
 import socket
 from .client import *
 from .mycrypto import *
-from .node import NodeAddr
+from .node import *
 
 
 class NodeServer(threading.Thread):
@@ -12,9 +12,14 @@ class NodeServer(threading.Thread):
         self.ip = addr["ip"]
         self.port = int(addr["port"])
         self.node = node
+
         self.store = dict()                     # 临时存储
         self.store['cache'] = []
         self.store['cache_lock'] = threading.Lock()
+
+        self.tmpBlock = list()
+        self.tmpBlockLock = threading.Lock()
+
         self.route = dict()
         self.route['getinfo'] = self.handle_getinfo
         self.route['setmain_pre'] = self.handle_setmain_prev
@@ -23,6 +28,7 @@ class NodeServer(threading.Thread):
         self.route['add'] = self.handle_add
         self.route['add'] = self.handle_add
         self.route['resv_block'] = self.handle_resv_block
+        self.route['request_block'] = self.handle_request_block
 
     def run(self):
         s = socket.socket()
@@ -70,5 +76,15 @@ class NodeServer(threading.Thread):
 
     def handle_resv_block(self,js):
         print("resv block: {}".format(js))
-        self.node.import_block(js)
+        self.tmpBlockLock.acquire()
+        self.tmpBlock.append(js)
+        self.tmpBlockLock.release()
+        # self.node.import_block(js)
         return True
+
+    def handle_request_block(self,data):
+        ''' return all the blocks '''
+        return {'data':[ bl.__str__() for bl in self.node.blocks],
+                'height': self.node.blocks[-1].height }
+
+    
