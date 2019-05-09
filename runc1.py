@@ -3,6 +3,7 @@ import time
 import random
 from BlockChain.client import *
 from BlockChain.node import NodeAddr
+from BlockChain.certificate import *
 
 dic = [
     {'ip': "127.0.0.1", 'port': 6000},
@@ -26,6 +27,14 @@ def send_data():
 
 if __name__ == "__main__":
     init_peers()
+    uug.change_addr('client1')
+    priv_key,_ = mycrypto.open_key("keys/client1_priv.cer", "keys/client1_pub.cer")
     while True:
-        send_data()
+        c = Certificate(subject = 'ertuil@ertuil.top', pub_key = "123a",proxyServer = "client1")
+        c.create_certificate(priv_key)
+        print("send: {}".format(c.get_js()))
+        broadcast(peers, dumpjson("add", c.get_js()))
         time.sleep(5)
+    # while True:
+    #     send_data()
+    #     time.sleep(5)

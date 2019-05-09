@@ -69,6 +69,8 @@ class NodeServer(threading.Thread):
 
     def handle_add(self, data):
         print("resv: {}".format(data))
+        if isinstance(data,str):
+            data = json.loads(data)
         self.store['cache_lock'].acquire()
         self.store['cache'].append(data)
         self.store['cache_lock'].release()
@@ -91,5 +93,4 @@ class NodeServer(threading.Thread):
         ''' return all the blocks '''
         return {'data':[ bl.__str__() for bl in self.node.blocks],
                 'height': len(self.node.blocks) }
-
     
