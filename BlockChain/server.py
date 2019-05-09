@@ -3,7 +3,8 @@ import json
 import socket
 from .client import *
 from .mycrypto import *
-from .node import Node, NodeAddr
+from .node import NodeAddr
+
 
 class NodeServer(threading.Thread):
     def __init__(self, node, addr):
@@ -30,7 +31,7 @@ class NodeServer(threading.Thread):
         print("Start Server at {}:{}".format(self.ip, self.port))
         while True:
             client, addr = s.accept()
-            recv = str(client.recv(65535), encoding="utf-8")
+            recv = str(client.recv(6553500), encoding="utf-8")
             ret = self.handle(recv)
             client.send(bytes(dumpjson("", ret), encoding="utf-8"))
             client.close()  # 关闭连接
@@ -68,7 +69,6 @@ class NodeServer(threading.Thread):
         return True
 
     def handle_resv_block(self,js):
-        # print("resv block: {}".format(js))
+        print("resv block: {}".format(js))
         self.node.import_block(js)
-        self.node.print_block()
         return True

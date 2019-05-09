@@ -6,7 +6,7 @@ def sender(addr, msg):
         s = socket.socket()
         s.connect((addr["ip"], int(addr["port"])))
         s.send(bytes(msg, encoding="utf-8"))
-        ret = str(s.recv(65535), encoding="utf-8")
+        ret = str(s.recv(6553500), encoding="utf-8")
         _,body = loadjson(ret)
         s.close()
     except ConnectionRefusedError as e:

@@ -1,3 +1,5 @@
 .DS_Store
 .Vscode/
 BlockChain/__pycache__/*
+.idea/
+env/
