@@ -49,6 +49,7 @@ if __name__ == "__main__":
                 li.remove(int(c.subject))
             except:
                 pass
+                
     # while True:
     #     send_data()
     #     time.sleep(5)
